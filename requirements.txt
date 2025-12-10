@@ -1,5 +1,0 @@
-streamlit
-matplotlib
-plotly
-pandas
-Add requirements for bike parking app
