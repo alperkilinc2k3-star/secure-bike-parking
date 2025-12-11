@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # <-- Dit is de correcte import (geen dubbele 'l' in 'matplotllib')
 from datetime import datetime
 
 # --- Titel ---
@@ -146,6 +146,3 @@ ax.set_ylabel("Aantal")
 ax.set_title("Parking Slot Overview")
 
 st.pyplot(fig)
-
-Fix all errors and add graphs
-
