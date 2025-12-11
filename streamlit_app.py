@@ -3,97 +3,100 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-# --- Titel ---
+# ==================== CONFIG ====================
+st.set_page_config(page_title="Secure Bike Parking", layout="centered")
 st.title("🚲 Secure Bike Parking System")
 st.write("A prototype that tracks user IDs and available parking slots.")
 
-# --- Basisinstellingen ---
 TOTAL_SLOTS = 30
 
-# Session state initialiseren
+# ==================== SESSION STATE ====================
 if "slots" not in st.session_state:
     st.session_state.slots = {i: None for i in range(1, TOTAL_SLOTS + 1)}
 
 if "logs" not in st.session_state:
     st.session_state.logs = []
 
-# --- Student Entry ---
-st.write("### 🔐 Student Entry")
-student_id = st.text_input("Enter student ID")
+# ==================== STUDENT ENTRY ====================
+st.markdown("### 🔐 Student Entry")
+student_id = st.text_input("Enter your student ID", key="student_input")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    if st.button("Park Bike"):
+    if st.button("Park Bike", type="primary"):
         if not student_id.strip():
             st.error("Please enter a student ID.")
         else:
-            empty_slots = [s for s, user in st.session_state.slots.items() if user is None]
-            if not empty_slots:
-                st.error("❌ No empty slots available!")
+            empty = [s for s, u in st.session_state.slots.items() if u is None]
+            if not empty:
+                st.error("No free slots available!")
             else:
-                slot = empty_slots[0]
+                slot = empty[0]
                 st.session_state.slots[slot] = student_id
-                st.success(f"Bike parked at slot **{slot}**")
                 st.session_state.logs.append({
                     "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "slot": slot,
                     "customer": student_id,
                     "action": "Enter"
                 })
+                st.success(f"Bike parked at slot **{slot}**")
+                st.rerun()
 
 with col2:
     if st.button("Remove Bike"):
         if not student_id.strip():
             st.error("Please enter a student ID.")
         else:
-            user_slots = [s for s, user in st.session_state.slots.items() if user == student_id]
-            if not user_slots:
-                st.warning("This student does not have a bike parked.")
+            taken = [s for s, u in st.session_state.slots.items() if u == student_id]
+            if not taken:
+                st.warning("No bike found for this ID.")
             else:
-                slot = user_slots[0]
+                slot = taken[0]
                 st.session_state.slots[slot] = None
-                st.success(f"Bike removed from slot **{slot}**")
                 st.session_state.logs.append({
                     "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "slot": slot,
                     "customer": student_id,
                     "action": "Exit"
                 })
+                st.success(f"Bike removed from slot **{slot}**")
+                st.rerun()
 
-# --- Huidige status ---
-st.write("### 📋 Current Parking Status")
-data = {"Slot": list(st.session_state.slots.keys()),
-        "Status": ["Free" if v is None else f"Taken by {v}" for v in st.session_state.slots.values()]}
+# ==================== CURRENT STATUS ====================
+st.markdown("### 📋 Current Parking Status")
+data = {
+    "Slot": list(st.session_state.slots.keys()),
+    "Status": ["Free" if v is None else f"Taken by {v}" for v in st.session_state.slots.values()]
+}
 df = pd.DataFrame(data)
 st.dataframe(df, use_container_width=True)
 
-# --- Samenvatting ---
 free = sum(1 for v in st.session_state.slots.values() if v is None)
 taken = TOTAL_SLOTS - free
 col1, col2 = st.columns(2)
-col1.metric("Free Slots", free)
-col2.metric("Occupied Slots", taken)
+col1.metric("Free Slots", free, delta=None)
+col2.metric("Occupied Slots", taken, delta=None)
 
-# --- Grafiek 1: Free vs Occupied ---
-st.write("### 📊 Slot Usage Overview")
-fig, ax = plt.subplots()
-ax.bar(["Free Slots", "Occupied Slots"], [free, taken], color=["#90EE90", "#FF6347"])
+# ==================== GRAFIEK 1: Free vs Occupied ====================
+st.markdown("### 📊 Parking Slot Overview")
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.bar(["Free Slots", "Occupied Slots"], [free, taken], color=["#4CAF50", "#F44336"])
 ax.set_ylabel("Number of Slots")
+ax.set_title("Current Slot Usage")
 st.pyplot(fig)
 
-# --- Event Log ---
-st.write("## 📄 Event Log")
+# ==================== LOGS & GRAFIEK 2 ====================
+st.markdown("## 📄 Event Log")
 if st.session_state.logs:
     log_df = pd.DataFrame(st.session_state.logs)
     st.dataframe(log_df, use_container_width=True)
 
-    # Grafiek: Entries/Exits per uur
-    st.write("## 📈 Entries & Exits per Hour")
+    st.markdown("## 📈 Entries vs Exits per Hour")
     log_df["hour"] = pd.to_datetime(log_df["time"]).dt.hour
     hourly = log_df.groupby(["hour", "action"]).size().unstack(fill_value=0)
-    fig2, ax2 = plt.subplots()
-    hourly.plot(kind="bar", ax=ax2, stacked=True, color=["#90EE90", "#FF6347"])
+    fig2, ax2 = plt.subplots(figsize=(10, 5))
+    hourly.plot(kind="bar", stacked=True, ax=ax2, color={"Enter": "#4CAF50", "Exit": "#F44336"})
     ax2.set_xlabel("Hour of Day")
     ax2.set_ylabel("Number of Events")
     ax2.legend(title="Action")
